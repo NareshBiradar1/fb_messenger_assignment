@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Cassandra connection settings
-CASSANDRA_HOST = os.getenv("CASSANDRA_HOST", "fb_messenger_assignment-cassandra-1")
+CASSANDRA_HOST = os.getenv("CASSANDRA_HOST", "localhost")
 CASSANDRA_PORT = int(os.getenv("CASSANDRA_PORT", "9042"))
 CASSANDRA_KEYSPACE = os.getenv("CASSANDRA_KEYSPACE", "messenger")
 
@@ -20,7 +20,7 @@ def wait_for_cassandra():
     logger.info("Waiting for Cassandra to be ready...")
     cluster = None
     
-    for _ in range(30):  # Increased retries to 30
+    for _ in range(10): 
         try:
             cluster = Cluster([CASSANDRA_HOST])
             session = cluster.connect()
