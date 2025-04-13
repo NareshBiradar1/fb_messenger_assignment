@@ -24,6 +24,7 @@ services:
       - CASSANDRA_CLUSTER_NAME=MessengerCluster
     volumes:
       - cassandra_data:/var/lib/cassandra
+    mem_limit: 2g
     healthcheck:
       test: ["CMD", "cqlsh", "-e", "describe keyspaces"]
       interval: 15s

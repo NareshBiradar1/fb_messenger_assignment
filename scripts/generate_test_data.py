@@ -8,6 +8,7 @@ import logging
 import random
 from datetime import datetime, timedelta
 from cassandra.cluster import Cluster
+from cassandra.query import BatchStatement, SimpleStatement
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -46,12 +47,97 @@ def generate_test_data(session):
     """
     logger.info("Generating test data...")
     
-    # TODO: Students should implement the test data generation logic
-    # Hint:
-    # 1. Create a set of user IDs
-    # 2. Create conversations between random pairs of users
-    # 3. For each conversation, generate a random number of messages
-    # 4. Update relevant tables to maintain data consistency
+    # Sample message content
+    sample_messages = [
+        "Hello!",
+        "How are you?",
+        "What's up?",
+        "Nice to meet you!",
+        "How's your day going?",
+        "Any plans for the weekend?",
+        "Did you see that movie?",
+        "Let's catch up soon!",
+        "Thanks for the message!",
+        "I'll get back to you later."
+    ]
+    
+    # Create users
+    users = list(range(1, NUM_USERS + 1))
+    logger.info(f"Created {len(users)} test users")
+    
+    # Create conversations
+    conversations = []
+    for _ in range(NUM_CONVERSATIONS):
+        # Select random pair of users
+        user1, user2 = random.sample(users, 2)
+        
+        # Generate conversation_id
+        conversation_id = random.randint(1, 1000000)
+        conversations.append((conversation_id, user1, user2))
+        
+        # Update both users' conversation maps
+        session.execute("""
+            UPDATE users
+            SET conversations[%(other_user_id)s] = %(conversation_id)s
+            WHERE user_id = %(user_id)s
+        """, {
+            'user_id': user1,
+            'other_user_id': user2,
+            'conversation_id': conversation_id
+        })
+        
+        session.execute("""
+            UPDATE users
+            SET conversations[%(other_user_id)s] = %(conversation_id)s
+            WHERE user_id = %(user_id)s
+        """, {
+            'user_id': user2,
+            'other_user_id': user1,
+            'conversation_id': conversation_id
+        })
+    
+    # Create messages for each conversation
+    for conversation_id, user1, user2 in conversations:
+        # Generate random number of messages
+        num_messages = random.randint(1, MAX_MESSAGES_PER_CONVERSATION)
+        batch = BatchStatement()
+        current_time = datetime.utcnow()
+        
+        for _ in range(num_messages):
+            # Alternate between users as sender
+            sender_id = user1 if _ % 2 == 0 else user2
+            receiver_id = user2 if _ % 2 == 0 else user1
+            
+            # Generate message content
+            content = random.choice(sample_messages)
+            
+            # Create message
+            batch.add(SimpleStatement("""
+                INSERT INTO conversations (
+                    conversation_id, created_at, message_id,
+                    sender_id, receiver_id, content
+                ) VALUES (
+                    %(conversation_id)s, %(created_at)s, now(),
+                    %(sender_id)s, %(receiver_id)s, %(content)s
+                )
+            """), {
+                'conversation_id': conversation_id,
+                'created_at': current_time,
+                'sender_id': sender_id,
+                'receiver_id': receiver_id,
+                'content': content
+            })
+            
+            # Move time back for next message
+            current_time -= timedelta(minutes=random.randint(1, 60))
+        
+        # Execute batch
+        session.execute(batch)
+        
+        logger.info(
+            f"Created conversation {conversation_id} between users "
+            f"{user1} and {user2} with {num_messages} messages"
+        )
     
     logger.info(f"Generated {NUM_CONVERSATIONS} conversations with messages")
     logger.info(f"User IDs range from 1 to {NUM_USERS}")

@@ -1,84 +1,123 @@
-from typing import Optional
+"""
+Message controller for handling message-related operations.
+"""
 from datetime import datetime
+from typing import Optional, List
 from fastapi import HTTPException, status
 
-from app.schemas.message import MessageCreate, MessageResponse, PaginatedMessageResponse
+from app.models.cassandra_models import MessageModel
+from app.schemas.message import (
+    MessageCreate,
+    MessageResponse,
+    PaginatedMessageResponse
+)
 
 class MessageController:
     """
-    Controller for handling message operations
-    This is a stub that students will implement
+    Controller for handling message operations.
     """
     
-    async def send_message(self, message_data: MessageCreate) -> MessageResponse:
+    @staticmethod
+    async def send_message(
+        sender_id: int,
+        receiver_id: int,
+        content: str,
+        conversation_id: Optional[int] = None
+    ) -> MessageResponse:
         """
-        Send a message from one user to another
+        Send a message to a user.
         
         Args:
-            message_data: The message data including content, sender_id, and receiver_id
+            sender_id: ID of the sender
+            receiver_id: ID of the receiver
+            content: Message content
+            conversation_id: Optional conversation ID
             
         Returns:
-            The created message with metadata
-        
+            Created message data
+            
         Raises:
-            HTTPException: If message sending fails
+            HTTPException: If message creation fails
         """
-        # This is a stub - students will implement the actual logic
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Method not implemented"
-        )
+        try:
+            message = await MessageModel.create_message(
+                sender_id=sender_id,
+                receiver_id=receiver_id,
+                content=content,
+                conversation_id=conversation_id
+            )
+            return message
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to send message: {str(e)}"
+            )
     
+    @staticmethod
     async def get_conversation_messages(
-        self, 
-        conversation_id: int, 
-        page: int = 1, 
+        conversation_id: int,
+        page: int = 1,
         limit: int = 20
     ) -> PaginatedMessageResponse:
         """
-        Get all messages in a conversation with pagination
+        Get messages for a conversation with pagination.
         
         Args:
             conversation_id: ID of the conversation
-            page: Page number
+            page: Page number (1-based)
             limit: Number of messages per page
             
         Returns:
-            Paginated list of messages
+            Paginated messages
             
         Raises:
-            HTTPException: If conversation not found or access denied
+            HTTPException: If message retrieval fails
         """
-        # This is a stub - students will implement the actual logic
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Method not implemented"
-        )
+        try:
+            messages = await MessageModel.get_conversation_messages(
+                conversation_id=conversation_id,
+                page=page,
+                limit=limit
+            )
+            return messages
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to get conversation messages: {str(e)}"
+            )
     
+    @staticmethod
     async def get_messages_before_timestamp(
-        self, 
-        conversation_id: int, 
+        conversation_id: int,
         before_timestamp: datetime,
-        page: int = 1, 
+        page: int = 1,
         limit: int = 20
     ) -> PaginatedMessageResponse:
         """
-        Get messages in a conversation before a specific timestamp with pagination
+        Get messages before a timestamp with pagination.
         
         Args:
             conversation_id: ID of the conversation
             before_timestamp: Get messages before this timestamp
-            page: Page number
+            page: Page number (1-based)
             limit: Number of messages per page
             
         Returns:
-            Paginated list of messages
+            Paginated messages
             
         Raises:
-            HTTPException: If conversation not found or access denied
+            HTTPException: If message retrieval fails
         """
-        # This is a stub - students will implement the actual logic
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Method not implemented"
-        ) 
+        try:
+            messages = await MessageModel.get_messages_before_timestamp(
+                conversation_id=conversation_id,
+                before_timestamp=before_timestamp,
+                page=page,
+                limit=limit
+            )
+            return messages
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to get messages before timestamp: {str(e)}"
+            )
